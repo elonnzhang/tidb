@@ -26,6 +26,7 @@ const (
 	unreservedkeywordStart = "The following tokens belong to UnReservedKeyword"
 	notKeywordStart        = "The following tokens belong to NotKeywordToken"
 	tiDBKeywordStart       = "The following tokens belong to TiDBKeyword"
+	tdsqlKeywordStart      = "The following tokens belong to TDSQLKeyword"
 )
 
 const (
@@ -33,6 +34,7 @@ const (
 	sectionReservedKeyword
 	sectionUnreservedKeyword
 	sectionTiDBKeyword
+	sectionTDSQLKeyword
 )
 
 const (
@@ -117,6 +119,8 @@ func main() {
 			section = sectionTiDBKeyword
 		} else if strings.Contains(line, notKeywordStart) {
 			section = sectionNone
+		} else if strings.Contains(line, tdsqlKeywordStart) {
+			section = sectionTDSQLKeyword
 		}
 
 		switch section {
@@ -134,6 +138,11 @@ func main() {
 			word := parseLine(line)
 			if len(word) > 0 {
 				fmt.Fprintf(keywordsFile, "\t{\"%s\", false, \"unreserved\"},\n", word)
+			}
+		case sectionTDSQLKeyword:
+			word := parseLine(line)
+			if len(word) > 0 {
+				fmt.Fprintf(keywordsFile, "\t{\"%s\", false, \"tdsql\"},\n", word)
 			}
 		}
 	}

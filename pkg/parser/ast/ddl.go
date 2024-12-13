@@ -2509,6 +2509,7 @@ const (
 	TableOptionTTL
 	TableOptionTTLEnable
 	TableOptionTTLJobInterval
+	TableOptionShardKey
 	TableOptionPlacementPolicy = TableOptionType(PlacementOptionPolicy)
 	TableOptionStatsBuckets    = TableOptionType(StatsOptionBuckets)
 	TableOptionStatsTopN       = TableOptionType(StatsOptionTopN)
@@ -2874,6 +2875,14 @@ func (n *TableOption) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteString(n.StrValue)
 			return nil
 		})
+	case TableOptionShardKey:
+		if n.ColumnName != nil {
+			ctx.WriteKeyWord("SHARDKEY ")
+			ctx.WritePlain("= ")
+			ctx.WritePlain(n.ColumnName.Name.O)
+		}
+
+		return nil
 	default:
 		return errors.Errorf("invalid TableOption: %d", n.Tp)
 	}

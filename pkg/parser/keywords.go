@@ -679,4 +679,5 @@ var Keywords = []KeywordsType{
 	{"TIFLASH", false, "tidb"},
 	{"TOPN", false, "tidb"},
 	{"WIDTH", false, "tidb"},
+	{"SHARDKEY", false, "tdsql"},
 }

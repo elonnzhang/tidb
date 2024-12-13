@@ -6037,6 +6037,15 @@ func TestDDLStatements(t *testing.T) {
 	_, _, err = p.Parse(createTableStr, "", "")
 	require.NoError(t, err)
 }
+func TestCreateTableShardkey(t *testing.T) {
+	createTableStr := "create table test1 ( a int, b int, c char(20),primary key (a,b),unique key u_1(a,c) ) charset utf8 comment 'a'"
+	p := parser.New()
+	_, _, err := p.Parse(createTableStr, "", "")
+	require.NoError(t, err)
+	createTableStr = `create table test1 ( a int, b int, c char(20),primary key (a,b),unique key u_1(a,c) ) charset utf8, shardkey=a;`
+	_, _, err = p.Parse(createTableStr, "", "")
+	require.NoError(t, err)
+}
 
 func TestAnalyze(t *testing.T) {
 	table := []testCase{

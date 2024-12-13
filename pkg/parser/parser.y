@@ -893,6 +893,9 @@ import (
 	topn                       "TOPN"
 	width                      "WIDTH"
 
+	/* The following tokens belong to TDSQLKeyword. Notice: make sure these tokens are contained in TDSQLKeyword. */
+	shardkey "SHARDKEY"
+
 %token	<item>
 
 	/*yy:token "1.%d"   */
@@ -1585,6 +1588,7 @@ import (
 	NotKeywordToken                 "Tokens not mysql keyword but treated specially"
 	UnReservedKeyword               "MySQL unreserved keywords"
 	TiDBKeyword                     "TiDB added keywords"
+	TDSQLKeyword                    "TDSQL added keywords"
 	FunctionNameConflict            "Built-in function call names which are conflict with keywords"
 	FunctionNameOptionalBraces      "Function with optional braces, all of them are reserved keywords."
 	FunctionNameDatetimePrecision   "Function with optional datetime precision, all of them are reserved keywords."
@@ -4485,7 +4489,7 @@ DatabaseOptionList:
  *          Address varchar(255),
  *          City varchar(255),
  *          PRIMARY KEY (P_Id)
- *      )
+ *      ) shardkey=P_Id
  *******************************************************************/
 CreateTableStmt:
 	"CREATE" OptTemporary "TABLE" IfNotExists TableName TableElementListOpt CreateTableOptionListOpt PartitionOpt DuplicateOpt AsOpt CreateTableSelectOpt OnCommitOpt
@@ -4880,7 +4884,14 @@ PartDefOptionList:
 	}
 
 PartDefOption:
-	"COMMENT" EqOpt stringLit
+	"SHARDKEY" eq Identifier
+	{
+		$$ = &ast.TableOption{
+			Tp:         ast.TableOptionShardKey,
+			ColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+		}
+	}
+|	"COMMENT" EqOpt stringLit
 	{
 		$$ = &ast.TableOption{Tp: ast.TableOptionComment, StrValue: $3}
 	}
@@ -6741,6 +6752,7 @@ Identifier:
 |	UnReservedKeyword
 |	NotKeywordToken
 |	TiDBKeyword
+|	TDSQLKeyword
 
 UnReservedKeyword:
 	"ACTION"
@@ -7167,6 +7179,9 @@ TiDBKeyword:
 |	"RESET"
 |	"DRY"
 |	"RUN"
+
+TDSQLKeyword:
+	"SHARDKEY"
 
 NotKeywordToken:
 	"ADDDATE"
