@@ -33,10 +33,18 @@ func TestKeywords(t *testing.T) {
 		}
 	}
 	require.Equal(t, found, true, "TiDBKeyword ADMIN is part of the list")
+	// Make sure TDSQL Keyword are included.
+	found = false
+	for _, kw := range parser.Keywords {
+		if kw.Word == "SHARDKEY" {
+			found = true
+		}
+	}
+	require.Equal(t, found, true, "TDSQLKeyword SHARDKEY is part of the list")
 }
 
 func TestKeywordsLength(t *testing.T) {
-	require.Equal(t, 654, len(parser.Keywords))
+	require.Equal(t, 655, len(parser.Keywords))
 
 	reservedNr := 0
 	for _, kw := range parser.Keywords {
