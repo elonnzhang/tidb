@@ -680,4 +680,5 @@ var Keywords = []KeywordsType{
 	{"TOPN", false, "tidb"},
 	{"WIDTH", false, "tidb"},
 	{"SHARDKEY", false, "tdsql"},
+	{"TDSQL_DISTRIBUTED", false, "tdsql"},
 }

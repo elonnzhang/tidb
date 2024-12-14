@@ -6045,6 +6045,14 @@ func TestCreateTableShardkey(t *testing.T) {
 	createTableStr = `create table test1 ( a int, b int, c char(20),primary key (a,b),unique key u_1(a,c) ) charset utf8 comment 'a' shardkey=a;`
 	_, _, err = p.Parse(createTableStr, "", "")
 	require.NoError(t, err)
+	createTableStr = `create table t1(a int key, b int)
+	tdsql_distributed by range(a)
+	(
+		s1 values less than(100),
+		s2 values less than(200)
+	);`
+	_, _, err = p.Parse(createTableStr, "", "")
+	require.NoError(t, err)
 }
 
 func TestAnalyze(t *testing.T) {

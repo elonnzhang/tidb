@@ -1091,11 +1091,12 @@ const (
 	TemporaryLocal
 )
 
-// ShardKeyOption
+// ShardKeyOption TDSQL 一级分区
 type ShardKeyOption struct {
 	node
 
-	ColumnName *ColumnName // must be a part of primary of uniq key
+	ColumnName       *ColumnName // must be a part of primary of uniq key
+	PartitionOptions *PartitionOptions
 }
 
 // Restore implements Node interface.
@@ -1104,6 +1105,10 @@ func (n *ShardKeyOption) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("SHARDKEY")
 		ctx.WritePlain("=")
 		ctx.WritePlain(n.ColumnName.Name.O)
+	}
+
+	if n.PartitionOptions != nil {
+
 	}
 	return nil
 }
@@ -4342,6 +4347,8 @@ type PartitionMethod struct {
 	// To be able to get original text and replace the syntactic sugar with generated
 	// partition definitions
 	node
+	// Flag 1 表示 tdsql
+	Flag int
 	// Tp is the type of the partition function
 	Tp model.PartitionType
 	// Linear is a modifier to the HASH and KEY type for choosing a different

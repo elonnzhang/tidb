@@ -929,7 +929,8 @@ var tokenMap = map[string]int{
 	"REUSE":                    reuse,
 
 	// add new token
-	"SHARDKEY": shardkey,
+	"SHARDKEY":          shardkey,
+	"TDSQL_DISTRIBUTED": tdsql_distributed,
 }
 
 // See https://dev.mysql.com/doc/refman/8.0/en/function-resolution.html for details.

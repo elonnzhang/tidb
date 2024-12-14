@@ -894,7 +894,8 @@ import (
 	width                      "WIDTH"
 
 	/* The following tokens belong to TDSQLKeyword. Notice: make sure these tokens are contained in TDSQLKeyword. */
-	shardkey "SHARDKEY"
+	shardkey          "SHARDKEY"
+	tdsql_distributed "TDSQL_DISTRIBUTED"
 
 %token	<item>
 
@@ -1268,7 +1269,9 @@ import (
 	PartitionIntervalOpt                   "Partition interval option"
 	PartitionKeyAlgorithmOpt               "ALGORITHM = n option for KEY partition"
 	PartitionMethod                        "Partition method"
+	TDSQLPartitionMethod                   "TDSQL Partition method"
 	PartitionOpt                           "Partition option"
+	TDSQLPartitionOpt                      "TDSQL Partition option"
 	PartitionNameList                      "Partition name list"
 	PartitionNameListOpt                   "table partition names list optional"
 	PartitionNumOpt                        "PARTITION NUM option"
@@ -4578,6 +4581,24 @@ PartitionOpt:
 		$$ = opt
 	}
 
+TDSQLPartitionOpt:
+	"TDSQL_DISTRIBUTED" "BY" TDSQLPartitionMethod PartitionDefinitionListOpt
+	{
+		method := $3.(*ast.PartitionMethod)
+		defs, _ := $4.([]*ast.PartitionDefinition)
+		opt := &ast.PartitionOptions{
+			PartitionMethod: *method,
+			Definitions:     defs,
+		}
+		/*
+		   if err := opt.Validate(); err != nil {
+		   yylex.AppendError(err)
+		   return 1
+		   }
+		*/
+		$$ = opt
+	}
+
 GlobalOrLocal:
 	"LOCAL"
 	{
@@ -4651,6 +4672,22 @@ PartitionKeyAlgorithmOpt:
 		}
 		$$ = &ast.PartitionKeyAlgorithm{
 			Type: tp,
+		}
+	}
+
+TDSQLPartitionMethod:
+	"RANGE" '(' BitExpr ')'
+	{
+		$$ = &ast.PartitionMethod{
+			Tp:   model.PartitionTypeRange,
+			Expr: $3.(ast.ExprNode),
+		}
+	}
+|	"LIST" '(' BitExpr ')'
+	{
+		$$ = &ast.PartitionMethod{
+			Tp:   model.PartitionTypeList,
+			Expr: $3.(ast.ExprNode),
 		}
 	}
 
@@ -4837,7 +4874,16 @@ PartitionDefinitionList:
 	}
 
 PartitionDefinition:
-	"PARTITION" Identifier PartDefValuesOpt PartDefOptionList SubPartDefinitionListOpt
+	Identifier PartDefValuesOpt
+	{
+		{
+			$$ = &ast.PartitionDefinition{
+				Name:   model.NewCIStr($1),
+				Clause: $2.(ast.PartitionDefinitionClause),
+			}
+		}
+	}
+|	"PARTITION" Identifier PartDefValuesOpt PartDefOptionList SubPartDefinitionListOpt
 	{
 		$$ = &ast.PartitionDefinition{
 			Name:    model.NewCIStr($2),
@@ -7180,6 +7226,7 @@ TiDBKeyword:
 
 TDSQLKeyword:
 	"SHARDKEY"
+|	"TDSQL_DISTRIBUTED"
 
 NotKeywordToken:
 	"ADDDATE"
@@ -12538,6 +12585,12 @@ ShardKeyOption:
 	{
 		$$ = &ast.ShardKeyOption{
 			ColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+		}
+	}
+|	TDSQLPartitionOpt
+	{
+		$$ = &ast.ShardKeyOption{
+			PartitionOptions: $1.(*ast.PartitionOptions),
 		}
 	}
 
