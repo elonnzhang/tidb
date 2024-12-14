@@ -58,6 +58,7 @@ var (
 	_ Node = &Constraint{}
 	_ Node = &IndexPartSpecification{}
 	_ Node = &ReferenceDef{}
+	_ Node = &ShardKeyOption{}
 )
 
 // CharsetOpt is used for parsing charset option from SQL.
@@ -1090,6 +1091,40 @@ const (
 	TemporaryLocal
 )
 
+// ShardKeyOption
+type ShardKeyOption struct {
+	node
+
+	ColumnName *ColumnName // must be a part of primary of uniq key
+}
+
+// Restore implements Node interface.
+func (n *ShardKeyOption) Restore(ctx *format.RestoreCtx) error {
+	if n.ColumnName != nil {
+		ctx.WriteKeyWord("SHARDKEY")
+		ctx.WritePlain("=")
+		ctx.WritePlain(n.ColumnName.Name.O)
+	}
+	return nil
+}
+
+// Accept
+func (n *ShardKeyOption) Accept(v Visitor) (Node, bool) {
+	newNode, skipChildren := v.Enter(n)
+	if skipChildren {
+		return v.Leave(newNode)
+	}
+	n = newNode.(*ShardKeyOption)
+	if n.ColumnName != nil {
+		node, ok := n.ColumnName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ColumnName = node.(*ColumnName)
+	}
+	return v.Leave(n)
+}
+
 // CreateTableStmt is a statement to create a table.
 // See https://dev.mysql.com/doc/refman/5.7/en/create-table.html
 type CreateTableStmt struct {
@@ -1109,6 +1144,7 @@ type CreateTableStmt struct {
 	Partition      *PartitionOptions
 	OnDuplicate    OnDuplicateKeyHandlingType
 	Select         ResultSetNode
+	ShardKeyOption *ShardKeyOption
 }
 
 // Restore implements Node interface.
@@ -1195,6 +1231,12 @@ func (n *CreateTableStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(" ON COMMIT PRESERVE ROWS")
 		}
 	}
+	if n.ShardKeyOption != nil {
+		ctx.WritePlain(" ")
+		if err := n.ShardKeyOption.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred while splicing CreateTableStmt ShardKey")
+		}
+	}
 
 	return nil
 }
@@ -1252,6 +1294,13 @@ func (n *CreateTableStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		n.Options[i] = node.(*TableOption)
+	}
+	if n.ShardKeyOption != nil {
+		node, ok = n.ShardKeyOption.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ShardKeyOption = node.(*ShardKeyOption)
 	}
 
 	return v.Leave(n)
@@ -2509,7 +2558,6 @@ const (
 	TableOptionTTL
 	TableOptionTTLEnable
 	TableOptionTTLJobInterval
-	TableOptionShardKey
 	TableOptionPlacementPolicy = TableOptionType(PlacementOptionPolicy)
 	TableOptionStatsBuckets    = TableOptionType(StatsOptionBuckets)
 	TableOptionStatsTopN       = TableOptionType(StatsOptionTopN)
@@ -2875,13 +2923,6 @@ func (n *TableOption) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteString(n.StrValue)
 			return nil
 		})
-	case TableOptionShardKey:
-		if n.ColumnName != nil {
-			ctx.WriteKeyWord("SHARDKEY ")
-			ctx.WritePlain("= ")
-			ctx.WritePlain(n.ColumnName.Name.O)
-		}
-
 		return nil
 	default:
 		return errors.Errorf("invalid TableOption: %d", n.Tp)

@@ -1275,6 +1275,7 @@ import (
 	PartDefValuesOpt                       "VALUES {LESS THAN {(expr | value_list) | MAXVALUE} | IN {value_list}"
 	PartDefOptionList                      "PartDefOption list"
 	PartDefOption                          "COMMENT [=] xxx | TABLESPACE [=] tablespace_name | ENGINE [=] xxx"
+	ShardKeyOption                         "shardkey=column_name"
 	PasswordOrLockOption                   "Single password or lock option for create user statement"
 	PasswordOrLockOptionList               "Password or lock options for create user statement"
 	PasswordOrLockOptions                  "Optional password or lock options for create user statement"
@@ -4492,7 +4493,7 @@ DatabaseOptionList:
  *      ) shardkey=P_Id
  *******************************************************************/
 CreateTableStmt:
-	"CREATE" OptTemporary "TABLE" IfNotExists TableName TableElementListOpt CreateTableOptionListOpt PartitionOpt DuplicateOpt AsOpt CreateTableSelectOpt OnCommitOpt
+	"CREATE" OptTemporary "TABLE" IfNotExists TableName TableElementListOpt CreateTableOptionListOpt ShardKeyOption PartitionOpt DuplicateOpt AsOpt CreateTableSelectOpt OnCommitOpt
 	{
 		stmt := $6.(*ast.CreateTableStmt)
 		stmt.Table = $5.(*ast.TableName)
@@ -4500,17 +4501,21 @@ CreateTableStmt:
 		stmt.TemporaryKeyword = $2.(ast.TemporaryKeyword)
 		stmt.Options = $7.([]*ast.TableOption)
 		if $8 != nil {
-			stmt.Partition = $8.(*ast.PartitionOptions)
+			stmt.ShardKeyOption = $8.(*ast.ShardKeyOption)
 		}
-		stmt.OnDuplicate = $9.(ast.OnDuplicateKeyHandlingType)
-		stmt.Select = $11.(*ast.CreateTableStmt).Select
-		if ($12 != nil && stmt.TemporaryKeyword != ast.TemporaryGlobal) || (stmt.TemporaryKeyword == ast.TemporaryGlobal && $12 == nil) {
+		if $9 != nil {
+			stmt.Partition = $9.(*ast.PartitionOptions)
+		}
+		stmt.OnDuplicate = $10.(ast.OnDuplicateKeyHandlingType)
+		stmt.Select = $12.(*ast.CreateTableStmt).Select
+		if ($13 != nil && stmt.TemporaryKeyword != ast.TemporaryGlobal) || (stmt.TemporaryKeyword == ast.TemporaryGlobal && $13 == nil) {
 			yylex.AppendError(yylex.Errorf("GLOBAL TEMPORARY and ON COMMIT DELETE ROWS must appear together"))
 		} else {
 			if stmt.TemporaryKeyword == ast.TemporaryGlobal {
-				stmt.OnCommitDelete = $12.(bool)
+				stmt.OnCommitDelete = $13.(bool)
 			}
 		}
+
 		$$ = stmt
 	}
 |	"CREATE" OptTemporary "TABLE" IfNotExists TableName LikeTableWithOrWithoutParen OnCommitOpt
@@ -4884,14 +4889,7 @@ PartDefOptionList:
 	}
 
 PartDefOption:
-	"SHARDKEY" eq Identifier
-	{
-		$$ = &ast.TableOption{
-			Tp:         ast.TableOptionShardKey,
-			ColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
-		}
-	}
-|	"COMMENT" EqOpt stringLit
+	"COMMENT" EqOpt stringLit
 	{
 		$$ = &ast.TableOption{Tp: ast.TableOptionComment, StrValue: $3}
 	}
@@ -12528,6 +12526,18 @@ TableElementListOpt:
 		$$ = &ast.CreateTableStmt{
 			Cols:        columnDefs,
 			Constraints: constraints,
+		}
+	}
+
+ShardKeyOption:
+	/* empty */
+	{
+		$$ = nil
+	}
+|	"SHARDKEY" eq Identifier
+	{
+		$$ = &ast.ShardKeyOption{
+			ColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
 		}
 	}
 
